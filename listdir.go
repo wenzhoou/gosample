@@ -5,16 +5,19 @@ import (
   "path/filepath"
   "os"
   "log"
+  "flag"
 )
 
 func main() {
-
-  err := filepath.Walk(".",
+  wordPtr := flag.String("d", ".", "directory")
+  flag.Parse()
+  
+  err := filepath.Walk(*wordPtr,
     func(path string, info os.FileInfo, err error) error {
     if err != nil {
         return err
     }
-    fmt.Println(path, info.Size())
+    fmt.Println(path, info.Size(), )
     return nil
   })
   if err != nil {
