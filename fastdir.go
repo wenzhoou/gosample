@@ -1,12 +1,13 @@
 package main
 
 import (
-  "path/filepath"
+  "github.com/karrick/godirwalk"
   "os"
   "log"
   "flag"
   "encoding/csv"
   "strconv"
+  "path/filepath"
 )
 
 func main() {
@@ -20,18 +21,22 @@ func main() {
 
   writer := csv.NewWriter(file)
   defer writer.Flush()
-
-  
-  err = filepath.Walk(*input,
-    func(path string, info os.FileInfo, err error) error {
+  godirwalk.Walk(*input, &godirwalk.Options{
+    Unsorted: true,
+    Callback: func(osPathname string, de *godirwalk.Dirent) error {
       checkError("Cannot get file : ", err)
-      err = writer.Write([]string{path, info.Name(), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05"), strconv.FormatBool(info.IsDir()) })
+      info, err := os.Stat(osPathname)
+      checkError("Cannot get fileInfo : ", err)
+      err = writer.Write([]string{osPathname, de.Name(), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05"), strconv.FormatBool(info.IsDir())})
       checkError("Cannot write file : ", err)
       return nil
+    },
+    ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
+      checkError("Walk error : ", err)
+      return godirwalk.SkipNode
+    },
   })
-  checkError("Walk error : ", err)
 }
-
 
 func checkError(message string, err error) {
   if err != nil {
