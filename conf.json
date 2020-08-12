@@ -1,0 +1,8 @@
+{
+  "Input"               : "c:\\tools",
+  "Output"              : ".\\result.csv",
+  "IgnoreDirsName"      : ["c:\\tools\\apache-maven-3.6.3\\lib", "bin"],
+  "IgnoreDirsPattern"   : ["boot$", "c:\\\\tools\\\\every*"],
+  "IgnoreFilesName"     : ["patch.xml", "c:\\tools\\apache-maven-3.6.3\\NOTICE"],
+  "IgnoreFilesPattern"  : ["\\.exe$", "\\.jar$"]
+}
