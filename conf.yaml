@@ -1,0 +1,21 @@
+loglevel: info
+input:
+  - c:\tools
+output:  .\result.csv
+ignore:
+  dirs:
+    name:
+      - c:\tools\apache-maven-3.6.3\lib
+      - bin
+    regex:
+      - boot$
+      - c:\\tools\\every*
+  files:
+    name:
+      - patch.xml
+      - c:\tools\apache-maven-3.6.3\NOTICE
+    regex:
+      - \.exe$
+      - \.jar$
+types:
+  'c:\tools\WinMerge': Winmerge

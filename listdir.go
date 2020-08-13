@@ -3,106 +3,150 @@ package main
 import (
   "path/filepath"
   "os"
-  "log"
+  log "github.com/sirupsen/logrus"
   "encoding/csv"
   "strconv"
-  "encoding/json"
   "regexp"
   "strings"
+  "github.com/gookit/config"
+  "github.com/gookit/config/yaml"
 )
 
-type Configuration struct {
-    Input                   string
+type ConfigInfo struct {
+    Input                   []string
     Output                  string
-    IgnoreDirsName          []string
-    IgnoreDirsPattern       []string
-    IgnoreDirsPatternCpl    []* regexp.Regexp
-    IgnoreFilesName         []string
-    IgnoreFilesPattern      []string
-    IgnoreFilesPatternCpl   []* regexp.Regexp
+    Ignore                  Ignore
+    Types                   map[string]string
+}
+
+type Ignore struct {
+  Dirs   IgnoreItem
+  Files  IgnoreItem
+}
+
+type IgnoreItem struct {
+  Name      []string
+  Regex     []string
+  RegexCpl  []* regexp.Regexp
 }
 
 var (
-  Config                 Configuration;
-  OutputWriter           * csv.Writer;
+  Config                 ConfigInfo
+  OutputWriter           * csv.Writer
 )
 
 func main() {
   Config = readConfig()
+  setLoglevel()
+  log.WithFields(log.Fields{
+    "config":    Config,
+  }).Info("Init OK")
   
   file, err := os.Create(Config.Output)
-  checkError("Cannot create file", err)
+  checkError("Cannot create output file", err)
   defer file.Close()
 
   OutputWriter = csv.NewWriter(file)
   defer OutputWriter.Flush()
   
-  Config.IgnoreDirsPatternCpl = make([]* regexp.Regexp, len(Config.IgnoreDirsPattern))
-  for i, s := range Config.IgnoreDirsPattern {
-    log.Println("Add Filter Element", s)
-    Config.IgnoreDirsPatternCpl[i] = regexp.MustCompile("(?i)" + s)
+  Config.Ignore.Dirs.RegexCpl = make([]* regexp.Regexp, len(Config.Ignore.Dirs.Regex))
+  for i, s := range Config.Ignore.Dirs.Regex {
+    log.Debugln("Add Dir Filter Element", s)
+    Config.Ignore.Dirs.RegexCpl[i] = regexp.MustCompile("(?i)" + s)
   }
   
-  Config.IgnoreFilesPatternCpl = make([]* regexp.Regexp, len(Config.IgnoreFilesPattern))
-  for i, s := range Config.IgnoreFilesPattern {
-    log.Println("Add Filter Element", s)
-    Config.IgnoreFilesPatternCpl[i] = regexp.MustCompile("(?i)" + s)
+  Config.Ignore.Files.RegexCpl = make([]* regexp.Regexp, len(Config.Ignore.Files.Regex))
+  for i, s := range Config.Ignore.Files.Regex {
+    log.Debugln("Add File Filter Element", s)
+    Config.Ignore.Files.RegexCpl[i] = regexp.MustCompile("(?i)" + s)
   }
-    
-  err = filepath.Walk(Config.Input, dealFile)
-  checkError("Walk error : ", err)
+  
+  for _, s := range Config.Input {
+    log.Debugln("Walk ", s)
+    err = filepath.Walk(s, dealFile)
+    checkError("Walk error : ", err)
+  }
 }
 
-func readConfig() Configuration {
-  file, _ := os.Open("conf.json")
-  defer file.Close()
-  decoder := json.NewDecoder(file)
-  configuration := Configuration{}
-  err := decoder.Decode(&configuration)
-  checkError("Read Config error : ", err)
-  return configuration;
+func readConfig() ConfigInfo {
+
+  config.WithOptions(config.ParseEnv)
+  config.AddDriver(yaml.Driver)
+
+  err := config.LoadFiles("conf.yaml")
+  checkError("Failed load conf.json", err)
+  conf := ConfigInfo{};
+  err = config.BindStruct("", &conf)
+  checkError("Failed parse conf.json", err)
+  return conf;
 }
+
+func setLoglevel() {
+  //log.SetReportCaller(true)
+  log.SetFormatter(&log.TextFormatter{ForceColors: true})
+  //log.SetOutput(colorable.NewColorableStdout())
+  log.SetOutput(os.Stdout)
+  switch config.String("loglevel") {
+    case "debug":
+      log.SetLevel(log.DebugLevel)
+    case "info":
+      log.SetLevel(log.InfoLevel)
+    case "warn":
+      log.SetLevel(log.WarnLevel)
+    case "error":
+      log.SetLevel(log.ErrorLevel)
+    default:
+      log.SetLevel(log.InfoLevel)
+      log.Warnf("Home: invalid log level supplied: '%s'", config.String("loglevel"))
+  }
+}
+
 
 func checkError(message string, err error) {
   if err != nil {
-    log.Fatal(message, err)
+    log.Errorf(message, err)
+    panic(err)
   }
 }
 
 func needIgnore(path string, name string, isDir bool) bool {
 
-  log.Println("Process File ", path, name, isDir)
+  log.Debug("Process File ", path, name, isDir)
 
   if !isDir {
-    for _, igr := range Config.IgnoreFilesName {
+    for _, igr := range Config.Ignore.Files.Name {
       
       if strings.EqualFold(igr,path) || strings.EqualFold(igr,name) {
+        log.WithFields(log.Fields{"path": path, "name" : name, "isDir": isDir }).Info("Ignore File")
         return true 
       }
     }
-    for _, re := range Config.IgnoreFilesPatternCpl {
+    for _, re := range Config.Ignore.Files.RegexCpl {
       
       if re.MatchString(path) {
+        log.WithFields(log.Fields{"path": path, "name" : name, "isDir": isDir }).Info("Ignore File")
         return true 
       }
     }
   }
   
   if isDir {
-    for _, igr := range Config.IgnoreDirsName {
+    for _, igr := range Config.Ignore.Dirs.Name {
       
       if strings.EqualFold(igr,path) || strings.EqualFold(igr,name) {
+        log.WithFields(log.Fields{"path": path, "name" : name, "isDir": isDir }).Info("Ignore Dir ")
         return true 
       }
     }
-    for _, re := range Config.IgnoreDirsPatternCpl {
+    for _, re := range Config.Ignore.Dirs.RegexCpl {
       
       if re.MatchString(path) {
+        log.WithFields(log.Fields{"path": path, "name" : name, "isDir": isDir }).Info("Ignore Dir ")
         return true 
       }
     }
   }
-  log.Println("passed ")
+  //log.Debug("passed ")
   return false
 }
 
@@ -110,13 +154,38 @@ func dealFile(fullpath string, info os.FileInfo, err error) error {
 
   checkError("Cannot get file : ", err)
   path := filepath.Dir(fullpath)
-  
   if needIgnore(fullpath, info.Name(), info.IsDir()) {
+    log.Debug("Ignore ", fullpath)
     return filepath.SkipDir
   }
   if !info.IsDir() {
-    err = OutputWriter.Write([]string{path, info.Name(), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05")})
+    log.Debug("Add ", info.Name())
+    err = OutputWriter.Write([]string{path, info.Name(), getType(fullpath), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05")})
     checkError("Cannot write file : ", err)
   }
   return nil
+}
+
+
+func getType(fullpath string) string {
+  for k, v := range Config.Types {
+    if strings.HasPrefix(fullpath, k) {
+      return v
+    }
+  }
+  return ""
+}
+
+func dumpMap(space string, m map[string]string) {
+  for k, v := range m {
+    log.Debug(space, k, ":", v)
+  }
+}
+
+func dumpArray(space string, a []interface{}) {
+  log.Debug(space, "[")
+  for _, v := range a {
+    log.Debug(space+"\t", v, ",")
+  }
+  log.Debug(space,"]")
 }
