@@ -74,10 +74,10 @@ func readConfig() ConfigInfo {
   config.AddDriver(yaml.Driver)
 
   err := config.LoadFiles("conf.yaml")
-  checkError("Failed load conf.json", err)
+  checkError("Failed load conf.yaml", err)
   conf := ConfigInfo{};
   err = config.BindStruct("", &conf)
-  checkError("Failed parse conf.json", err)
+  checkError("Failed parse conf.yaml", err)
   return conf;
 }
 
@@ -109,7 +109,7 @@ func checkError(message string, err error) {
   }
 }
 
-func needIgnore(path string, name string, isDir bool) bool {
+func needIgnoreFile(path string, name string, isDir bool) bool {
 
   log.Debug("Process File ", path, name, isDir)
 
@@ -129,7 +129,11 @@ func needIgnore(path string, name string, isDir bool) bool {
       }
     }
   }
-  
+  return false
+}
+
+func needIgnoreDir(path string, name string, isDir bool) bool {
+
   if isDir {
     for _, igr := range Config.Ignore.Dirs.Name {
       
@@ -154,11 +158,11 @@ func dealFile(fullpath string, info os.FileInfo, err error) error {
 
   checkError("Cannot get file : ", err)
   path := filepath.Dir(fullpath)
-  if needIgnore(fullpath, info.Name(), info.IsDir()) {
+  if needIgnoreDir(fullpath, info.Name(), info.IsDir()) {
     log.Debug("Ignore ", fullpath)
     return filepath.SkipDir
   }
-  if !info.IsDir() {
+  if !info.IsDir() && !needIgnoreFile(fullpath, info.Name(), info.IsDir()) {
     log.Debug("Add ", info.Name())
     err = OutputWriter.Write([]string{path, info.Name(), getType(fullpath), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05")})
     checkError("Cannot write file : ", err)
