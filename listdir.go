@@ -164,7 +164,7 @@ func dealFile(fullpath string, info os.FileInfo, err error) error {
   }
   if !info.IsDir() && !needIgnoreFile(fullpath, info.Name(), info.IsDir()) {
     log.Debug("Add ", info.Name())
-    err = OutputWriter.Write([]string{path, info.Name(), getType(fullpath), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05")})
+    err = OutputWriter.Write([]string{path, info.Name(), filepath.Ext(info.Name()), getType(fullpath), strconv.FormatInt(info.Size() ,10), info.ModTime().Format("2006-01-02 15:04:05")})
     checkError("Cannot write file : ", err)
   }
   return nil
