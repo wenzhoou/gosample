@@ -17,5 +17,8 @@ ignore:
     regex:
       - \.exe$
       - \.jar$
-types:
-  'c:\tools\WinMerge': Winmerge
+typeconf:
+  - path: 'c:\tools\WinMerge'
+    type: Winmerge
+  - path: 'c:\tools'
+    type: Tools
