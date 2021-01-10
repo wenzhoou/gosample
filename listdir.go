@@ -177,9 +177,9 @@ func dealFile(fullpath string, info os.FileInfo, err error) error {
 
 
 func getType(fullpath string) string {
-  for k, v := range Config.Types {
-    if strings.HasPrefix(fullpath, k) {
-      return v
+  for _, v := range Config.ConfType {
+    if strings.HasPrefix(fullpath, v.Path) {
+      return v.Type
     }
   }
   return ""
