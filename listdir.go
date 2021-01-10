@@ -12,11 +12,16 @@ import (
   "github.com/gookit/config/yaml"
 )
 
+type ConfType struct {
+    Path                    string
+    Type                    string
+}
+
 type ConfigInfo struct {
     Input                   []string
     Output                  string
     Ignore                  Ignore
-    Types                   map[string]string
+    ConfType                []ConfType
 }
 
 type Ignore struct {
