@@ -1,4 +1,5 @@
-name: Go
+name: Go learn
+run-name: ${{ github.actor }} 正在学习githubaction
 
 on:
   push:
@@ -13,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - run: java -version
+    - run: id
+    
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
